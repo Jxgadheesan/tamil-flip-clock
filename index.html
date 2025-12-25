@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tamil Flip Clock</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@700&display=swap" rel="stylesheet">
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: radial-gradient(circle at top, #111 0%, #000 60%);
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-smooth: always;
+}
+
+canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* CLOCK */
+.clock {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    z-index: 2;
+}
+
+/* FLIP CARD */
+.flip {
+    width: 190px;
+    height: 240px;
+    position: relative;
+    perspective: 1200px;
+}
+
+/* PANELS */
+.panel {
+    position: absolute;
+    width: 100%;
+    height: 50%;
+    overflow: hidden;
+    background: linear-gradient(#2d2d2d, #1f1f1f);
+    display: flex;
+    justify-content: center;
+    border-radius: 20px;
+}
+
+.panel.top {
+    top: 0;
+    border-bottom: 2px solid #000;
+    border-radius: 20px 20px 12px 12px;
+}
+
+.panel.bottom {
+    bottom: 0;
+    background: linear-gradient(#1a1a1a, #111);
+    border-radius: 12px 12px 20px 20px;
+}
+
+/* NUMBER */
+.number {
+    font-family: 'Noto Sans Tamil', sans-serif;
+    font-size: 120px;
+    font-weight: 700;
+    color: #fff;
+    height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 4px;
+}
+
+.panel.top .number {
+    transform: translateY(0);
+}
+
+.panel.bottom .number {
+    transform: translateY(-120px);
+}
+
+/* FLIP ANIMATION */
+.flip-top-flip,
+.flip-bottom-flip {
+    position: absolute;
+    width: 100%;
+    height: 50%;
+    overflow: hidden;
+    backface-visibility: hidden;
+    z-index: 5;
+    border-radius: 20px;
+}
+
+.flip-top-flip {
+    top: 0;
+    background: linear-gradient(#2f2f2f, #1f1f1f);
+    border-bottom: 2px solid #000;
+    transform-origin: bottom;
+    border-radius: 20px 20px 12px 12px;
+}
+
+.flip-bottom-flip {
+    bottom: 0;
+    background: linear-gradient(#1a1a1a, #111);
+    transform-origin: top;
+    border-radius: 12px 12px 20px 20px;
+}
+
+.flip-top-flip.animate {
+    animation: flipTop 0.65s cubic-bezier(.4,.0,.2,1) forwards;
+}
+
+.flip-bottom-flip.animate {
+    animation: flipBottom 0.65s cubic-bezier(.4,.0,.2,1) forwards;
+}
+
+@keyframes flipTop {
+    to { transform: rotateX(-90deg); }
+}
+
+@keyframes flipBottom {
+    from { transform: rotateX(90deg); }
+    to { transform: rotateX(0deg); }
+}
+
+/* DOTS */
+.dots {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    background: #555;
+    border-radius: 50%;
+    opacity: 0.6;
+}
+
+/* CREDIT */
+.credit {
+    position: absolute;
+    bottom: 36px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #444;
+    letter-spacing: 2px;
+    z-index: 2;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="snow"></canvas>
+
+<div class="clock">
+    <div class="flip" id="hours"></div>
+
+    <div class="dots"><div class="dot"></div><div class="dot"></div></div>
+
+    <div class="flip" id="minutes"></div>
+
+    <div class="dots"><div class="dot"></div><div class="dot"></div></div>
+
+    <div class="flip" id="seconds"></div>
+</div>
+
+<div class="credit">@jagadheesan</div>
+
+<script>
+/* ---------- CLOCK ---------- */
+const tamil = ['௦','௧','௨','௩','௪','௫','௬','௭','௮','௯'];
+
+function toTamil(n) {
+    return n.toString().padStart(2, '0')
+        .split('')
+        .map(d => tamil[d])
+        .join('');
+}
+
+function render(container, value) {
+    container.innerHTML = `
+        <div class="panel top">
+            <div class="number">${toTamil(value)}</div>
+        </div>
+        <div class="panel bottom">
+            <div class="number">${toTamil(value)}</div>
+        </div>
+    `;
+}
+
+function flip(container, oldVal, newVal) {
+    container.querySelectorAll('.flip-top-flip, .flip-bottom-flip')
+        .forEach(e => e.remove());
+
+    const topFlip = document.createElement('div');
+    topFlip.className = 'flip-top-flip animate';
+    topFlip.innerHTML = `<div class="number">${toTamil(oldVal)}</div>`;
+
+    const bottomFlip = document.createElement('div');
+    bottomFlip.className = 'flip-bottom-flip animate';
+    bottomFlip.innerHTML = `<div class="number">${toTamil(newVal)}</div>`;
+
+    container.append(topFlip, bottomFlip);
+
+    setTimeout(() => {
+        render(container, newVal);
+        topFlip.remove();
+        bottomFlip.remove();
+    }, 650);
+}
+
+let ph=-1, pm=-1, ps=-1;
+const hEl = document.getElementById('hours');
+const mEl = document.getElementById('minutes');
+const sEl = document.getElementById('seconds');
+
+function tick() {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    const s = now.getSeconds();
+
+    if (ph === -1) {
+        render(hEl,h);
+        render(mEl,m);
+        render(sEl,s);
+    } else {
+        if (h !== ph) flip(hEl,ph,h);
+        if (m !== pm) flip(mEl,pm,m);
+        if (s !== ps) flip(sEl,ps,s);
+    }
+
+    ph=h; pm=m; ps=s;
+}
+
+tick();
+setInterval(tick,1000);
+
+/* ---------- SNOW ---------- */
+const canvas = document.getElementById('snow');
+const ctx = canvas.getContext('2d');
+
+let w,h;
+function resize(){
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize',resize);
+
+const flakes = Array.from({length: 120}, () => ({
+    x: Math.random()*w,
+    y: Math.random()*h,
+    r: Math.random()*1.8 + 0.6,
+    s: Math.random()*0.6 + 0.2
+}));
+
+function snow(){
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    flakes.forEach(f=>{
+        ctx.beginPath();
+        ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+        ctx.fill();
+        f.y += f.s;
+        if(f.y>h){ f.y=-5; f.x=Math.random()*w; }
+    });
+    requestAnimationFrame(snow);
+}
+snow();
+</script>
+
+</body>
+</html>
